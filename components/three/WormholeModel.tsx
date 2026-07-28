@@ -81,12 +81,13 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
   const elapsed = useRef(0);
   const didSignalReady = useRef(false);
   const lightBasePosition = useRef(new THREE.Vector3());
-  const lightTarget = useRef(new THREE.Vector3());
+  const lightTargetPosition = useRef(new THREE.Vector3());
+  const pointerInsideCanvas = useRef(false);
 
   const starMaterial = useMemo(() => new StarMaterial(), []);
   const wormholeMaterial = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
+    () => {
+      const material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color("#a790d2"),
         transmission: 0.94,
         thickness: 1.05,
@@ -100,7 +101,59 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
         side: THREE.DoubleSide,
         depthTest: true,
         depthWrite: true,
-      }),
+      });
+
+      material.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "#include <common>",
+            "#include <common>\nvarying vec3 vWormholeLocalPosition;",
+          )
+          .replace(
+            "#include <begin_vertex>",
+            "vWormholeLocalPosition = position;\n#include <begin_vertex>",
+          );
+
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            "#include <common>",
+            "#include <common>\nvarying vec3 vWormholeLocalPosition;",
+          )
+          .replace(
+            "#include <color_fragment>",
+            `#include <color_fragment>
+vec3 wormholeGradientPosition = normalize(vWormholeLocalPosition);
+float wormholeGradientAxis =
+  wormholeGradientPosition.x * 0.45 +
+  wormholeGradientPosition.y * 0.35 +
+  wormholeGradientPosition.z * 0.20;
+float wormholeGradientWave = sin(
+  wormholeGradientPosition.x * 3.0 +
+  wormholeGradientPosition.y * 2.0 +
+  wormholeGradientPosition.z * 2.5
+) * 0.12;
+float wormholeGradientMix = clamp(
+  wormholeGradientAxis * 0.5 + 0.5 + wormholeGradientWave,
+  0.0,
+  1.0
+);
+vec3 wormholePink = vec3(1.0, 0.31, 0.85);
+vec3 wormholePurple = vec3(0.48, 0.30, 1.0);
+vec3 wormholeBlue = vec3(0.24, 0.48, 1.0);
+vec3 wormholeGradientColor = wormholeGradientMix < 0.5
+  ? mix(wormholePink, wormholePurple, wormholeGradientMix * 2.0)
+  : mix(wormholePurple, wormholeBlue, (wormholeGradientMix - 0.5) * 2.0);
+diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
+          )
+          .replace(
+            "#include <emissivemap_fragment>",
+            "#include <emissivemap_fragment>\ntotalEmissiveRadiance = min(totalEmissiveRadiance + wormholeGradientColor * 0.04, vec3(3.0));",
+          );
+      };
+      material.customProgramCacheKey = () => "wormhole-gradient-v1";
+
+      return material;
+    },
     [],
   );
 
@@ -131,8 +184,9 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
 
     if (parts.light) {
       lightBasePosition.current.copy(parts.light.position);
+      parts.light.color.set("#755DFF");
       parts.light.intensity = 3.5;
-      parts.light.distance = 8;
+      parts.light.distance = 9;
       parts.light.decay = 2;
     } else {
       console.warn("[wormhole.glb] Missing exported PointLight");
@@ -153,6 +207,23 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
     parts.camera.aspect = size.width / size.height;
     parts.camera.updateProjectionMatrix();
   }, [parts.camera, size.height, size.width]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handlePointerEnter = () => {
+      pointerInsideCanvas.current = true;
+    };
+    const handlePointerLeave = () => {
+      pointerInsideCanvas.current = false;
+    };
+
+    canvas.addEventListener("pointerenter", handlePointerEnter);
+    canvas.addEventListener("pointerleave", handlePointerLeave);
+    return () => {
+      canvas.removeEventListener("pointerenter", handlePointerEnter);
+      canvas.removeEventListener("pointerleave", handlePointerLeave);
+    };
+  }, [gl]);
 
   useEffect(() => {
     if (!mixer) {
@@ -199,12 +270,16 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
     }
 
     if (parts.light && !hasBakedLightPositionAnimation) {
-      lightTarget.current.copy(lightBasePosition.current);
-      if (!reducedMotion) {
-        lightTarget.current.x += pointer.x * 0.32;
-        lightTarget.current.y += pointer.y * 0.22;
+      lightTargetPosition.current.copy(lightBasePosition.current);
+      if (!reducedMotion && pointerInsideCanvas.current) {
+        lightTargetPosition.current.x += pointer.x * 1.1;
+        lightTargetPosition.current.y += pointer.y * 0.75;
+        lightTargetPosition.current.z += pointer.x * 0.15;
       }
-      parts.light.position.lerp(lightTarget.current, 1 - Math.exp(-delta * 2.5));
+      parts.light.position.lerp(
+        lightTargetPosition.current,
+        1 - Math.exp(-delta * 3.2),
+      );
     }
 
     if (!didSignalReady.current) {
