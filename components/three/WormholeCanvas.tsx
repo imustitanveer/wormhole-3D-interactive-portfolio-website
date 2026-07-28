@@ -56,7 +56,7 @@ export function WormholeCanvas({ onReady }: WormholeCanvasProps) {
         onCreated={({ gl }) => gl.setClearColor("#000000")}
       >
         <Suspense fallback={null}>
-          <hemisphereLight args={["#8f78c2", "#050208", 0.025]} />
+          <hemisphereLight args={["#5e4f80", "#040108", 0.025]} />
           <WormholeModel reducedMotion={reducedMotion} onReady={onReady} />
           <EffectComposer multisampling={0}>
             <Bloom luminanceThreshold={1.4} luminanceSmoothing={0.18} intensity={0.12} mipmapBlur />

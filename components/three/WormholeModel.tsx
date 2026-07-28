@@ -176,10 +176,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
     }
 
     if (parts.camera) {
+      parts.camera.near = 0.01;
+      parts.camera.far = 100;
+      parts.camera.updateProjectionMatrix();
+    
       previousCamera.current = get().camera;
       set({ camera: parts.camera });
-    } else {
-      console.warn("[wormhole.glb] Missing exported PerspectiveCamera");
     }
 
     if (parts.light) {
@@ -204,7 +206,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
 
   useEffect(() => {
     if (!parts.camera) return;
+  
     parts.camera.aspect = size.width / size.height;
+    parts.camera.near = 0.01;
+    parts.camera.far = 100;
     parts.camera.updateProjectionMatrix();
   }, [parts.camera, size.height, size.width]);
 
