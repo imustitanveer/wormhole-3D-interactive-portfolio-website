@@ -20,6 +20,8 @@ type SceneParts = {
   wormholeMesh?: THREE.Mesh;
 };
 
+const DISABLE_CAMERA_ANIMATION_FOR_DEBUG = false;
+
 const normalizedName = (name: string) => name.replace(/[^a-z0-9]/gi, "").toLowerCase();
 
 function findSceneParts(scene: THREE.Object3D): SceneParts {
@@ -61,6 +63,23 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
   const gltf = useGLTF("/models/wormhole.glb");
   const importedScene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const parts = useMemo(() => findSceneParts(importedScene), [importedScene]);
+  const playableClips = useMemo(() => {
+    if (!DISABLE_CAMERA_ANIMATION_FOR_DEBUG) return gltf.animations;
+
+    return gltf.animations
+      .map((clip) => {
+        const filteredTracks = clip.tracks.filter(
+          (track) => !track.name.toLowerCase().includes("camera"),
+        );
+
+        return new THREE.AnimationClip(
+          `${clip.name}-without-camera`,
+          clip.duration,
+          filteredTracks,
+        );
+      })
+      .filter((clip) => clip.tracks.length > 0);
+  }, [gltf.animations]);
   const mixer = useMemo(
     () =>
       gltf.animations.length > 0 ? new THREE.AnimationMixer(importedScene) : null,
@@ -80,6 +99,7 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
   const previousCamera = useRef<THREE.PerspectiveCamera | THREE.OrthographicCamera | null>(null);
   const elapsed = useRef(0);
   const didSignalReady = useRef(false);
+  const didLogAnimationClips = useRef(false);
   const lightBasePosition = useRef(new THREE.Vector3());
   const lightTargetPosition = useRef(new THREE.Vector3());
   const pointerInsideCanvas = useRef(false);
@@ -179,7 +199,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       parts.camera.near = 0.01;
       parts.camera.far = 100;
       parts.camera.updateProjectionMatrix();
-    
+
       previousCamera.current = get().camera;
       set({ camera: parts.camera });
     }
@@ -206,7 +226,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
 
   useEffect(() => {
     if (!parts.camera) return;
-  
+
     parts.camera.aspect = size.width / size.height;
     parts.camera.near = 0.01;
     parts.camera.far = 100;
@@ -231,6 +251,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
   }, [gl]);
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || didLogAnimationClips.current) return;
+
+    didLogAnimationClips.current = true;
+
+    console.info(
+      "[wormhole.glb] animation clips",
+      gltf.animations.map((clip) => ({
+        name: clip.name,
+        duration: clip.duration,
+        tracks: clip.tracks.map((track) => track.name),
+      })),
+    );
+  }, [gltf.animations]);
+
+  useEffect(() => {
     if (!mixer) {
       if (process.env.NODE_ENV === "development") {
         console.warn("[wormhole.glb] No baked GLB animation clips found");
@@ -238,7 +273,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       return;
     }
 
-    const actions = gltf.animations.map((clip) => {
+    const actions = playableClips.map((clip) => {
       if (process.env.NODE_ENV === "development") {
         console.info("[wormhole.glb] Playing baked animation", {
           name: clip.name,
@@ -255,10 +290,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
     return () => {
       actions.forEach((action) => action.stop());
       mixer.stopAllAction();
-      gltf.animations.forEach((clip) => mixer.uncacheClip(clip));
+      playableClips.forEach((clip) => mixer.uncacheClip(clip));
       mixer.uncacheRoot(importedScene);
     };
-  }, [gltf.animations, importedScene, mixer]);
+  }, [importedScene, mixer, playableClips]);
 
   useFrame((_, delta) => {
     elapsed.current += delta;

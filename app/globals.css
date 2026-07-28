@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 :root {
-  --font-geist-sans: "Helvetica Neue", "Inter", "SF Pro Display", Arial, sans-serif;
   --font-geist-mono: "SFMono-Regular", "SF Mono", "Roboto Mono", monospace;
   --ink: #f4f1f7;
   --muted: rgba(232, 226, 238, 0.64);
@@ -24,7 +23,7 @@ body {
 
 body {
   overflow-x: hidden;
-  font-family: var(--font-geist-sans);
+  font-family: var(--font-elms-sans), sans-serif;
 }
 
 button,

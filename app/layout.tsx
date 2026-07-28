@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Elms_Sans } from "next/font/google";
 import "./globals.css";
+
+const elmsSans = Elms_Sans({
+  subsets: ["latin"],
+  variable: "--font-elms-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
@@ -28,7 +35,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={elmsSans.variable}>{children}</body>
     </html>
   );
 }

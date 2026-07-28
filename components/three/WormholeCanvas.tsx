@@ -44,7 +44,7 @@ export function WormholeCanvas({ onReady }: WormholeCanvasProps) {
   return (
     <SceneErrorBoundary>
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 49.426, near: 0.1, far: 1000 }}
+        camera={{ position: [0, 0, 5], fov: 49.426, near: 0.01, far: 100 }}
         dpr={[1, 1.75]}
         gl={{
           antialias: true,
