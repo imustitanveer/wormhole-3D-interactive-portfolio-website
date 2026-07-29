@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { FileText, Mail } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { type SVGProps } from "react";
+import { CircleImage } from "@/components/ui/CircleImage";
 
 type WormholeHeroProps = {
   visible: boolean;
@@ -53,16 +53,14 @@ function YoutubeIcon(props: SVGProps<SVGSVGElement>) {
 
 function HeroProfile() {
   return (
-    <div className="relative size-24 overflow-hidden rounded-full border border-white/20 bg-violet-950/30 shadow-[0_14px_48px_rgba(84,62,175,0.34)] sm:size-28 xl:size-32">
-      <Image
-        src="/photo.jpeg"
-        alt="Musti Tanvir"
-        fill
-        sizes="(max-width: 640px) 96px, (max-width: 1280px) 112px, 128px"
-        className="object-cover"
-        priority
-      />
-    </div>
+    <CircleImage
+      src="/photo.jpeg"
+      alt="Musti Tanvir"
+      size="xl"
+      inset="none"
+      imageClassName="object-cover"
+      priority
+    />
   );
 }
 

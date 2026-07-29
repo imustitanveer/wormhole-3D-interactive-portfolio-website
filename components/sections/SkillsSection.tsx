@@ -1,15 +1,27 @@
 "use client";
 
 import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { capabilities, type Capability } from "./skills";
 
 const reveal: Variants = {
-  hidden: { opacity: 0, y: 24, scale: 0.985 },
+  hidden: { opacity: 0, y: 24, scale: 0.985, filter: "blur(4px)" },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
+    filter: "blur(0px)",
     transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const headingReveal: Variants = {
+  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -43,16 +55,25 @@ const pillToneClasses: Record<Capability["tone"], string> = {
   amber: "border-amber-400/15 bg-amber-500/20 text-amber-300",
 };
 
-function SkillCard({ capability, reducedMotion }: { capability: Capability; reducedMotion: boolean }) {
+function SkillCard({
+  capability,
+  reducedMotion,
+  cardRef,
+}: {
+  capability: Capability;
+  reducedMotion: boolean;
+  cardRef: (node: HTMLElement | null) => void;
+}) {
   const accent = accentStyles[capability.accent];
   const pillTone = pillToneClasses[capability.tone];
 
   return (
     <motion.article
+      ref={cardRef}
       variants={reveal}
-      whileHover={reducedMotion ? undefined : { y: -5 }}
+      whileHover={reducedMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className={`${capability.layout} group relative flex min-h-[320px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/25 p-6 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 md:p-8`}
+      className={`${capability.layout} group relative flex min-h-[320px] w-[88vw] max-w-[420px] shrink-0 snap-center flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/25 p-6 backdrop-blur-xl transition-colors duration-300 hover:border-white/20 md:w-auto md:max-w-none md:shrink md:p-8`}
       style={{
         boxShadow:
           "inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 80px rgba(0,0,0,0.24)",
@@ -100,6 +121,38 @@ function SkillCard({ capability, reducedMotion }: { capability: Capability; redu
 
 export function SkillsSection() {
   const shouldReduceMotion = useReducedMotion() ?? false;
+  const [activeCard, setActiveCard] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLElement | null>>([]);
+  const intersectionRatios = useRef(capabilities.map(() => 0));
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const index = cardRefs.current.indexOf(entry.target as HTMLElement);
+          if (index >= 0) intersectionRatios.current[index] = entry.intersectionRatio;
+        });
+
+        const nextActive = intersectionRatios.current.reduce(
+          (bestIndex, ratio, index, ratios) =>
+            ratio > ratios[bestIndex] ? index : bestIndex,
+          0,
+        );
+        setActiveCard((current) => (current === nextActive ? current : nextActive));
+      },
+      { root: carousel, threshold: [0.35, 0.5, 0.65, 0.8] },
+    );
+
+    cardRefs.current.forEach((card) => {
+      if (card) observer.observe(card);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section
@@ -118,27 +171,46 @@ export function SkillsSection() {
           initial={shouldReduceMotion ? false : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
-          variants={reveal}
+          variants={headingReveal}
           className="text-4xl font-semibold tracking-[-0.045em] text-white md:text-6xl"
         >
           Skills
         </motion.h2>
 
         <motion.div
+          ref={carouselRef}
           variants={stagger}
           initial={shouldReduceMotion ? false : "hidden"}
           whileInView="visible"
-          viewport={{ once: true, amount: 0.12 }}
-          className="mt-10 grid grid-cols-1 gap-4 md:mt-12 md:grid-cols-12 md:gap-5"
+          viewport={{ once: true, amount: 0.15 }}
+          aria-label="Skills carousel"
+          className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mt-12 md:grid md:grid-cols-12 md:gap-5 md:overflow-visible md:pb-0"
         >
-          {capabilities.map((capability) => (
+          {capabilities.map((capability, index) => (
             <SkillCard
               key={capability.title}
               capability={capability}
               reducedMotion={shouldReduceMotion}
+              cardRef={(node) => {
+                cardRefs.current[index] = node;
+              }}
             />
           ))}
         </motion.div>
+
+        <div className="mt-2 flex items-center justify-between md:hidden" aria-label={`Skill ${activeCard + 1} of ${capabilities.length}`}>
+          <p className="font-mono text-[0.62rem] tracking-[0.18em] text-white/45 tabular-nums">
+            {String(activeCard + 1).padStart(2, "0")} / {String(capabilities.length).padStart(2, "0")}
+          </p>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            {capabilities.map((capability, index) => (
+              <span
+                key={capability.title}
+                className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ${index === activeCard ? "w-5 bg-violet-300" : "w-1.5 bg-white/20"}`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

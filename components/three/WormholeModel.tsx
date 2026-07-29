@@ -22,15 +22,15 @@ type SceneParts = {
 
 const DISABLE_CAMERA_ANIMATION_FOR_DEBUG = false;
 const HERO_TRANSITION_VIEWPORTS = 1.5;
-const SCROLL_DAMPING = 4;
-const MAX_CAMERA_PULLBACK = 1.5;
-const OUTER_TORUS_FADE_START = 0.38;
-const OUTER_TORUS_FADE_END = 0.78;
-const HERO_WORMHOLE_SCALE = 0.82;
-const LONG_TERM_WORMHOLE_SCALE = 0.78;
-const MIN_WORMHOLE_SCALE = 0.64;
-const WORMHOLE_DRIFT_X = -0.3;
-const WORMHOLE_DRIFT_Y = 0.12;
+const HERO_SCROLL_DAMPING = 3.5;
+const PAGE_SCROLL_DAMPING = 4;
+const CAMERA_PULL_DISTANCE = 0.45;
+const OUTER_TORUS_FADE_START = 0.08;
+const OUTER_TORUS_FADE_END = 0.22;
+const OUTER_TORUS_VISIBILITY_CUTOFF = 0.015;
+const WORMHOLE_MIN_SCALE = 0.72;
+const WORMHOLE_SCROLL_X = 0;
+const WORMHOLE_SCROLL_Y = 0;
 
 const normalizedName = (name: string) => name.replace(/[^a-z0-9]/gi, "").toLowerCase();
 
@@ -95,6 +95,36 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
       gltf.animations.length > 0 ? new THREE.AnimationMixer(importedScene) : null,
     [gltf.animations.length, importedScene],
   );
+  const hasBakedCameraPositionAnimation = useMemo(() => {
+    if (!parts.camera) return false;
+
+    return playableClips.some((clip) =>
+      clip.tracks.some((track) => {
+        const binding = THREE.PropertyBinding.parseTrackName(track.name);
+        return binding.nodeName === parts.camera?.name && binding.propertyName === "position";
+      }),
+    );
+  }, [parts.camera, playableClips]);
+  const wormholeAnimation = useMemo(() => {
+    const tracks = parts.wormholeMesh
+      ? gltf.animations.flatMap((clip) =>
+          clip.tracks.filter((track) => {
+            const binding = THREE.PropertyBinding.parseTrackName(track.name);
+            return binding.nodeName === parts.wormholeMesh?.name;
+          }),
+        )
+      : [];
+    const properties = new Set(
+      tracks.map((track) => THREE.PropertyBinding.parseTrackName(track.name).propertyName),
+    );
+
+    return {
+      trackNames: tracks.map((track) => track.name),
+      hasPosition: properties.has("position"),
+      hasQuaternion: properties.has("quaternion"),
+      hasScale: properties.has("scale"),
+    };
+  }, [gltf.animations, parts.wormholeMesh]);
   const hasBakedLightPositionAnimation = useMemo(() => {
     if (!parts.light) return false;
 
@@ -110,20 +140,23 @@ export function WormholeModel({ reducedMotion, onReady }: WormholeModelProps) {
   const elapsed = useRef(0);
   const didSignalReady = useRef(false);
   const didLogAnimationClips = useRef(false);
+  const didLogWormholeTracks = useRef(false);
+  const didWarnWormholeTransform = useRef(false);
   const lightBasePosition = useRef(new THREE.Vector3());
   const lightTargetPosition = useRef(new THREE.Vector3());
   const pointerInsideCanvas = useRef(false);
   const cameraBasePosition = useRef(new THREE.Vector3());
-  const animatedCameraPosition = useRef(new THREE.Vector3());
+  const bakedCameraPosition = useRef(new THREE.Vector3());
   const cameraScrollOffset = useRef(new THREE.Vector3());
+  const cameraLocalPull = useRef(new THREE.Vector3());
   const appliedCameraScrollOffset = useRef(new THREE.Vector3());
   const wormholeBaseScale = useRef(new THREE.Vector3(1, 1, 1));
-  const animatedWormholeScale = useRef(new THREE.Vector3(1, 1, 1));
+  const bakedWormholeScale = useRef(new THREE.Vector3(1, 1, 1));
   const wormholeBasePosition = useRef(new THREE.Vector3());
-  const animatedWormholePosition = useRef(new THREE.Vector3());
-  const wormholeScrollOffset = useRef(new THREE.Vector3());
-  const appliedWormholeScrollOffset = useRef(new THREE.Vector3());
-  const appliedWormholeScale = useRef(1);
+  const bakedWormholePosition = useRef(new THREE.Vector3());
+  const bakedWormholeQuaternion = useRef(new THREE.Quaternion());
+  const previousWormholePositionOffset = useRef(new THREE.Vector3());
+  const currentWormholePositionOffset = useRef(new THREE.Vector3());
   const smoothedHeroProgress = useRef(0);
   const smoothedPageProgress = useRef(0);
 
@@ -292,6 +325,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
   }, [gltf.animations]);
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || didLogWormholeTracks.current) return;
+
+    didLogWormholeTracks.current = true;
+    console.info("[wormhole] animated tracks", wormholeAnimation.trackNames);
+  }, [wormholeAnimation.trackNames]);
+
+  useEffect(() => {
     if (!mixer) {
       if (process.env.NODE_ENV === "development") {
         console.warn("[wormhole.glb] No baked GLB animation clips found");
@@ -325,17 +365,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
     elapsed.current += delta;
     starMaterial.uniforms.uTime.value = reducedMotion ? 0 : elapsed.current;
 
-    // Remove the previous frame's additive scroll composition before the mixer
-    // writes the next absolute baked transforms.
+    // Restore the prior baked position before the mixer writes this frame so
+    // the additive scroll translation can never become the next frame's base.
     if (parts.camera) {
       parts.camera.position.sub(appliedCameraScrollOffset.current);
-      if (!mixer) parts.camera.position.copy(cameraBasePosition.current);
+      appliedCameraScrollOffset.current.set(0, 0, 0);
     }
     if (parts.wormholeMesh) {
-      parts.wormholeMesh.position.sub(appliedWormholeScrollOffset.current);
-      parts.wormholeMesh.scale.multiplyScalar(1 / appliedWormholeScale.current);
-      if (!mixer) {
-        parts.wormholeMesh.position.copy(wormholeBasePosition.current);
+      parts.wormholeMesh.position.sub(previousWormholePositionOffset.current);
+      previousWormholePositionOffset.current.set(0, 0, 0);
+      if (!wormholeAnimation.hasScale) {
         parts.wormholeMesh.scale.copy(wormholeBaseScale.current);
       }
     }
@@ -350,6 +389,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       }
     }
 
+    if (parts.camera && !hasBakedCameraPositionAnimation) {
+      parts.camera.position.copy(cameraBasePosition.current);
+    }
+    if (parts.wormholeMesh && !wormholeAnimation.hasPosition) {
+      parts.wormholeMesh.position.copy(wormholeBasePosition.current);
+    }
+    if (parts.wormholeMesh && !wormholeAnimation.hasScale) {
+      parts.wormholeMesh.scale.copy(wormholeBaseScale.current);
+    }
+
     const rawHeroProgress = THREE.MathUtils.clamp(
       window.scrollY / (window.innerHeight * HERO_TRANSITION_VIEWPORTS),
       0,
@@ -360,11 +409,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       1,
     );
     const rawPageProgress = THREE.MathUtils.clamp(window.scrollY / maxScroll, 0, 1);
-    const targetHeroProgress = reducedMotion
-      ? window.scrollY >= window.innerHeight * 0.75
-        ? 1
-        : 0
-      : rawHeroProgress;
     const targetPageProgress = reducedMotion
       ? rawPageProgress >= OUTER_TORUS_FADE_START
         ? 1
@@ -372,11 +416,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       : rawPageProgress;
 
     smoothedHeroProgress.current = reducedMotion
-      ? targetHeroProgress
+      ? rawHeroProgress
       : THREE.MathUtils.damp(
           smoothedHeroProgress.current,
-          targetHeroProgress,
-          SCROLL_DAMPING,
+          rawHeroProgress,
+          HERO_SCROLL_DAMPING,
           delta,
         );
     smoothedPageProgress.current = reducedMotion
@@ -384,20 +428,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
       : THREE.MathUtils.damp(
           smoothedPageProgress.current,
           targetPageProgress,
-          SCROLL_DAMPING,
+          PAGE_SCROLL_DAMPING,
           delta,
         );
 
-    const heroProgress = smoothedHeroProgress.current;
+    const cameraPullProgress = smoothedHeroProgress.current;
     const pageProgress = smoothedPageProgress.current;
+    const outerTorusProgress = pageProgress;
 
     if (parts.camera) {
-      animatedCameraPosition.current.copy(parts.camera.position);
+      bakedCameraPosition.current.copy(parts.camera.position);
+      cameraLocalPull.current.set(
+        0,
+        0,
+        cameraPullProgress * CAMERA_PULL_DISTANCE,
+      );
       cameraScrollOffset.current
-        .set(0, 0, heroProgress * MAX_CAMERA_PULLBACK)
-        .applyQuaternion(parts.camera.quaternion);
+        .copy(cameraLocalPull.current)
+        .applyQuaternion(parts.camera.quaternion)
+        .clampLength(0, CAMERA_PULL_DISTANCE);
       parts.camera.position
-        .copy(animatedCameraPosition.current)
+        .copy(bakedCameraPosition.current)
         .add(cameraScrollOffset.current);
       appliedCameraScrollOffset.current.copy(cameraScrollOffset.current);
     }
@@ -405,43 +456,51 @@ diffuseColor.rgb = mix(diffuseColor.rgb, wormholeGradientColor, 0.45);`,
     const outerOpacity =
       1 -
       THREE.MathUtils.smoothstep(
-        pageProgress,
+        outerTorusProgress,
         OUTER_TORUS_FADE_START,
         OUTER_TORUS_FADE_END,
       );
     starMaterial.uniforms.uOpacity.value = outerOpacity;
-    if (parts.starMesh) parts.starMesh.visible = outerOpacity > 0.01;
+    if (parts.starMesh) {
+      parts.starMesh.visible = outerOpacity > OUTER_TORUS_VISIBILITY_CUTOFF;
+    }
 
     if (parts.wormholeMesh) {
-      animatedWormholePosition.current.copy(parts.wormholeMesh.position);
-      animatedWormholeScale.current.copy(parts.wormholeMesh.scale);
-      const heroScale = THREE.MathUtils.lerp(
+      bakedWormholePosition.current.copy(parts.wormholeMesh.position);
+      bakedWormholeScale.current.copy(parts.wormholeMesh.scale);
+      bakedWormholeQuaternion.current.copy(parts.wormholeMesh.quaternion);
+      const wormholeScaleMultiplier = THREE.MathUtils.lerp(
         1,
-        HERO_WORMHOLE_SCALE,
-        heroProgress,
-      );
-      const longTermScale = THREE.MathUtils.lerp(
-        1,
-        LONG_TERM_WORMHOLE_SCALE,
+        WORMHOLE_MIN_SCALE,
         pageProgress,
       );
-      const wormholeScale = Math.max(
-        heroScale * longTermScale,
-        MIN_WORMHOLE_SCALE,
-      );
-      wormholeScrollOffset.current.set(
-        WORMHOLE_DRIFT_X * pageProgress,
-        WORMHOLE_DRIFT_Y * pageProgress,
+      currentWormholePositionOffset.current.set(
+        WORMHOLE_SCROLL_X * pageProgress,
+        WORMHOLE_SCROLL_Y * pageProgress,
         0,
       );
       parts.wormholeMesh.position
-        .copy(animatedWormholePosition.current)
-        .add(wormholeScrollOffset.current);
+        .copy(bakedWormholePosition.current)
+        .add(currentWormholePositionOffset.current);
       parts.wormholeMesh.scale
-        .copy(animatedWormholeScale.current)
-        .multiplyScalar(wormholeScale);
-      appliedWormholeScrollOffset.current.copy(wormholeScrollOffset.current);
-      appliedWormholeScale.current = wormholeScale;
+        .copy(bakedWormholeScale.current)
+        .multiplyScalar(wormholeScaleMultiplier);
+      parts.wormholeMesh.quaternion.copy(bakedWormholeQuaternion.current);
+      previousWormholePositionOffset.current.copy(currentWormholePositionOffset.current);
+
+      if (process.env.NODE_ENV === "development" && !didWarnWormholeTransform.current) {
+        const scaleLength = parts.wormholeMesh.scale.length();
+        const displacement = parts.wormholeMesh.position.distanceTo(
+          bakedWormholePosition.current,
+        );
+        if (scaleLength > 10 || scaleLength < 0.1 || displacement > 1) {
+          didWarnWormholeTransform.current = true;
+          console.warn("[wormhole] excessive scroll transform", {
+            displacement,
+            scaleLength,
+          });
+        }
+      }
     }
 
     if (parts.light && !hasBakedLightPositionAnimation) {
