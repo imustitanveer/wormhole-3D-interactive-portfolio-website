@@ -158,7 +158,7 @@ export function SkillsSection() {
     <section
       id="skills"
       aria-labelledby="skills-heading"
-      className="pointer-events-auto relative z-[4] min-h-screen bg-transparent px-5 py-24 text-white sm:px-7 md:px-[clamp(2rem,6vw,6rem)] md:py-36"
+      className="pointer-events-auto relative z-[4] bg-transparent px-5 pt-40 pb-8 text-white sm:px-7 md:px-[clamp(2rem,6vw,6rem)] md:pb-9"
     >
       <div
         aria-hidden="true"

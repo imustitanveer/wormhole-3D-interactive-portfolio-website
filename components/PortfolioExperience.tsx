@@ -3,7 +3,10 @@
 import { useCallback, useState } from "react";
 import { WormholeHero } from "@/components/hero/WormholeHero";
 import { SpaceLoader } from "@/components/loader/SpaceLoader";
+import { AwardsSection } from "@/components/sections/AwardsSection";
+import { EducationSection } from "@/components/sections/EducationSection";
 import { ExperienceSection } from "@/components/sections/ExperienceSection";
+import { ResearchSection } from "@/components/sections/ResearchSection";
 import { SkillsSection } from "@/components/sections/SkillsSection";
 import { WormholeBackdrop } from "@/components/three/WormholeBackdrop";
 
@@ -30,6 +33,9 @@ export function PortfolioExperience() {
         <WormholeHero visible={loaderComplete} />
         <SkillsSection />
         <ExperienceSection />
+        <ResearchSection />
+        <AwardsSection />
+        <EducationSection />
       </main>
     </>
   );
