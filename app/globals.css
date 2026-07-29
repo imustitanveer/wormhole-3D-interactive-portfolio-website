@@ -21,6 +21,10 @@ body {
   color: var(--ink);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   overflow-x: hidden;
   font-family: var(--font-elms-sans), sans-serif;
@@ -42,11 +46,11 @@ a {
   display: grid;
   min-height: 100svh;
   overflow: hidden;
-  background: #000;
+  background: transparent;
 }
 
 .hero-canvas {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
 }
@@ -87,6 +91,10 @@ a {
 
 @keyframes load-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;

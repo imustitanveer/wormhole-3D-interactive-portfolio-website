@@ -5,6 +5,7 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { Component, Suspense, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import * as THREE from "three";
 import { WormholeModel } from "./WormholeModel";
+import { WorldStars } from "./WorldStars";
 
 type WormholeCanvasProps = { onReady: () => void };
 
@@ -56,6 +57,7 @@ export function WormholeCanvas({ onReady }: WormholeCanvasProps) {
         onCreated={({ gl }) => gl.setClearColor("#000000")}
       >
         <Suspense fallback={null}>
+          <WorldStars />
           <hemisphereLight args={["#5e4f80", "#040108", 0.025]} />
           <WormholeModel reducedMotion={reducedMotion} onReady={onReady} />
           <EffectComposer multisampling={0}>

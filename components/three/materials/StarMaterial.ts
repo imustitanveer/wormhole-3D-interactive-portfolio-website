@@ -14,6 +14,7 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   precision highp float;
   uniform float uTime;
+  uniform float uOpacity;
   varying vec2 vUv;
   varying vec3 vPosition;
 
@@ -44,7 +45,7 @@ const fragmentShader = /* glsl */ `
     vec3 tint = mix(vec3(0.72, 0.81, 1.0), vec3(1.0, 0.91, 1.0), seed * 0.55);
     vec3 stars = tint * (tiny * 2.8 + medium * 4.4 + bright * 7.0);
     vec3 space = vec3(0.005, 0.003, 0.012);
-    gl_FragColor = vec4(space + stars, 1.0);
+    gl_FragColor = vec4((space + stars) * uOpacity, 1.0);
   }
 `;
 
@@ -53,10 +54,14 @@ export class StarMaterial extends THREE.ShaderMaterial {
     super({
       vertexShader,
       fragmentShader,
-      uniforms: { uTime: { value: 0 } },
+      uniforms: {
+        uTime: { value: 0 },
+        uOpacity: { value: 1 },
+      },
       side: THREE.DoubleSide,
       depthTest: true,
       depthWrite: true,
+      transparent: false,
       toneMapped: false,
     });
   }

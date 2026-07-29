@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { FileText, Mail } from "lucide-react";
-import { useState, type SVGProps } from "react";
-import { WormholeCanvas } from "@/components/three/WormholeCanvas";
+import { type SVGProps } from "react";
 
 function GithubIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -109,17 +108,8 @@ function SocialLinks() {
 }
 
 export function WormholeHero() {
-  const [loaded, setLoaded] = useState(false);
-
   return (
-    <main className="hero">
-      <div className="hero-canvas" aria-hidden="true">
-        <WormholeCanvas onReady={() => setLoaded(true)} />
-        <div className="loading-veil" data-loaded={loaded}>
-          <div className="loading-ring" />
-        </div>
-      </div>
-
+    <div className="hero pointer-events-none">
       <section
         className="pointer-events-none relative z-[4] flex min-h-svh items-end justify-start px-5 pb-6 pt-20 sm:px-7 sm:pb-8 md:items-center md:justify-end md:px-[clamp(2rem,6vw,6rem)] md:py-10"
         aria-label="Introduction"
@@ -129,7 +119,7 @@ export function WormholeHero() {
 
           <div className="mt-5 sm:mt-6">
             <h1 className="text-5xl leading-[0.92] font-semibold tracking-[-0.055em] text-balance md:text-6xl xl:text-7xl">
-              Hi, I’m Musti Tanvir.
+              hi, I’m Musti Tanvir!
             </h1>
             <p className="mt-3 text-lg font-medium tracking-[-0.025em] text-violet-200 sm:text-xl">
               From ambiguity to production.
@@ -151,6 +141,6 @@ export function WormholeHero() {
           </h2>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
