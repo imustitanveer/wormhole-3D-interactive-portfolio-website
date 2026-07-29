@@ -2,7 +2,30 @@
 
 import Image from "next/image";
 import { FileText, Mail } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { type SVGProps } from "react";
+
+type WormholeHeroProps = {
+  visible: boolean;
+};
+
+function revealAnimation(index: number, visible: boolean, reducedMotion: boolean) {
+  return {
+    initial: false,
+    animate: visible
+      ? { opacity: 1, y: 0, filter: "blur(0px)" }
+      : {
+          opacity: 0,
+          y: reducedMotion ? 0 : 20,
+          filter: reducedMotion ? "blur(0px)" : "blur(6px)",
+        },
+    transition: {
+      duration: reducedMotion ? 0.2 : 0.62,
+      delay: visible && !reducedMotion ? index * 0.08 : 0,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  };
+}
 
 function GithubIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -30,28 +53,22 @@ function YoutubeIcon(props: SVGProps<SVGSVGElement>) {
 
 function HeroProfile() {
   return (
-    <div className="flex items-center gap-4 sm:gap-5">
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-full border border-white/20 bg-violet-950/30 shadow-[0_12px_40px_rgba(90,65,180,0.3)] sm:size-28 xl:size-32">
-        <Image
-          src="/photo.jpeg"
-          alt="Musti Tanvir"
-          fill
-          sizes="(max-width: 640px) 96px, (max-width: 1280px) 112px, 128px"
-          className="object-cover"
-          priority
-        />
-      </div>
-      <p className="max-w-52 font-mono text-[0.66rem] font-medium tracking-[0.19em] text-white/60 sm:text-xs">
-        <span className="mb-2 block h-px w-8 bg-gradient-to-r from-violet-300 to-transparent shadow-[0_0_12px_rgba(167,139,250,0.75)]" />
-        FORWARD-DEPLOYED AI ENGINEER
-      </p>
+    <div className="relative size-24 overflow-hidden rounded-full border border-white/20 bg-violet-950/30 shadow-[0_14px_48px_rgba(84,62,175,0.34)] sm:size-28 xl:size-32">
+      <Image
+        src="/photo.jpeg"
+        alt="Musti Tanvir"
+        fill
+        sizes="(max-width: 640px) 96px, (max-width: 1280px) 112px, 128px"
+        className="object-cover"
+        priority
+      />
     </div>
   );
 }
 
 function HeroActions() {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center justify-center gap-3">
       <a
         href="mailto:YOUR_EMAIL_HERE"
         className="inline-flex min-h-11 items-center gap-2 rounded-full bg-violet-500 px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-300"
@@ -74,7 +91,7 @@ function HeroActions() {
 
 function SocialLinks() {
   return (
-    <div className="flex items-center gap-2.5" aria-label="Social links">
+    <div className="flex items-center justify-center gap-2.5" aria-label="Social links">
       <a
         href="https://github.com/mustitanveer"
         target="_blank"
@@ -107,38 +124,73 @@ function SocialLinks() {
   );
 }
 
-export function WormholeHero() {
+export function WormholeHero({ visible }: WormholeHeroProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
+
   return (
     <div className="hero pointer-events-none">
       <section
-        className="pointer-events-none relative z-[4] flex min-h-svh items-end justify-start px-5 pb-6 pt-20 sm:px-7 sm:pb-8 md:items-center md:justify-end md:px-[clamp(2rem,6vw,6rem)] md:py-10"
+        className="pointer-events-none relative z-[4] flex min-h-svh items-center justify-center px-5 py-16 text-center sm:px-7 md:px-[clamp(2rem,6vw,6rem)]"
         aria-label="Introduction"
       >
-        <div className="pointer-events-auto w-full max-w-[480px] text-[#f7f4fb] drop-shadow-[0_2px_16px_rgba(4,1,12,0.72)]">
-          <HeroProfile />
+        <div
+          aria-hidden={!visible}
+          inert={!visible}
+          className={`pointer-events-auto relative w-full max-w-[880px] text-[#f7f4fb] drop-shadow-[0_2px_18px_rgba(4,1,12,0.78)] ${visible ? "" : "pointer-events-none"}`}
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[115%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(5,2,14,0.34),transparent_68%)] blur-2xl"
+          />
 
-          <div className="mt-5 sm:mt-6">
-            <h1 className="text-5xl leading-[0.92] font-semibold tracking-[-0.055em] text-balance md:text-6xl xl:text-7xl">
-              hi, I’m Musti Tanvir!
-            </h1>
-            <p className="mt-3 text-lg font-medium tracking-[-0.025em] text-violet-200 sm:text-xl">
-              From ambiguity to production.
-            </p>
-            <p className="mt-3 max-w-[46ch] text-sm leading-6 text-slate-300/80 sm:text-[0.95rem] sm:leading-6">
-              I build production-ready AI systems, scalable backends, and full-stack products. I
-              work across customers, product, and engineering to turn ambiguous problems into
-              reliable deployments.
-            </p>
-          </div>
+          <motion.div {...revealAnimation(0, visible, shouldReduceMotion)} className="flex justify-center">
+            <HeroProfile />
+          </motion.div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-4 sm:mt-6 sm:gap-5">
+          <motion.p
+            {...revealAnimation(1, visible, shouldReduceMotion)}
+            className="mt-5 font-mono text-[0.66rem] font-medium tracking-[0.22em] text-white/65 uppercase sm:text-xs"
+          >
+            Forward-deployed AI engineer
+          </motion.p>
+
+          <motion.h1
+            {...revealAnimation(2, visible, shouldReduceMotion)}
+            className="mt-5 text-[3.4rem] leading-[0.88] font-semibold tracking-[-0.055em] text-balance sm:text-6xl md:text-8xl xl:text-[7rem]"
+          >
+            <span className="block">Hi, I’m</span>
+            <span className="block">Musti Tanvir.</span>
+          </motion.h1>
+
+          <motion.p
+            {...revealAnimation(3, visible, shouldReduceMotion)}
+            className="mt-5 text-xl font-medium tracking-[-0.025em] text-white/90 md:text-2xl"
+          >
+            From ambiguity to production.
+          </motion.p>
+
+          <motion.p
+            {...revealAnimation(4, visible, shouldReduceMotion)}
+            className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/65 sm:text-base sm:leading-7"
+          >
+            I build production-ready AI systems, scalable backends, and full-stack products—turning
+            ambiguous problems into reliable deployments.
+          </motion.p>
+
+          <motion.div {...revealAnimation(5, visible, shouldReduceMotion)} className="mt-6">
             <HeroActions />
-            <SocialLinks />
-          </div>
+          </motion.div>
 
-          <h2 className="mt-5 pl-10 font-mono text-xs tracking-[0.16em] text-white/55 uppercase sm:mt-6 sm:pl-0">
+          <motion.div {...revealAnimation(6, visible, shouldReduceMotion)} className="mt-4">
+            <SocialLinks />
+          </motion.div>
+
+          <motion.p
+            {...revealAnimation(7, visible, shouldReduceMotion)}
+            className="mt-5 font-mono text-[0.65rem] tracking-[0.18em] text-white/50 uppercase"
+          >
             Let’s build something useful.
-          </h2>
+          </motion.p>
         </div>
       </section>
     </div>

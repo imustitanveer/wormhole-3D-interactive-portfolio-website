@@ -53,31 +53,17 @@ a {
   position: fixed;
   inset: 0;
   z-index: 0;
-}
-
-.loading-veil {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(circle at 68% 43%, #10091c, #030207 48%);
-  transition: opacity 900ms ease, visibility 900ms ease;
-}
-
-.loading-veil[data-loaded="true"] {
-  visibility: hidden;
   opacity: 0;
+  filter: blur(10px);
+  transform: scale(1.025);
+  transition: opacity 900ms ease, filter 900ms ease, transform 900ms ease;
+  will-change: opacity, filter, transform;
 }
 
-.loading-ring {
-  width: clamp(7rem, 12vw, 10rem);
-  aspect-ratio: 1;
-  border: 1px solid rgba(183, 158, 245, 0.17);
-  border-top-color: rgba(212, 198, 249, 0.75);
-  border-radius: 50%;
-  box-shadow: 0 0 50px rgba(99, 64, 177, 0.12);
-  animation: load-spin 2s linear infinite;
+.hero-canvas[data-revealed="true"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
 }
 
 .webgl-fallback {
@@ -89,7 +75,6 @@ a {
     #030207;
 }
 
-@keyframes load-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -99,5 +84,11 @@ a {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .hero-canvas {
+    filter: none;
+    transform: none;
+    transition-duration: 180ms;
   }
 }
