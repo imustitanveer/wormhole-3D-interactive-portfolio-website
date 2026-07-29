@@ -2,10 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { WormholeHero } from "@/components/hero/WormholeHero";
+import { FloatingNavbar } from "@/components/layout/FloatingNavbar";
+import { Footer } from "@/components/layout/Footer";
 import { SpaceLoader } from "@/components/loader/SpaceLoader";
 import { AwardsSection } from "@/components/sections/AwardsSection";
 import { EducationSection } from "@/components/sections/EducationSection";
 import { ExperienceSection } from "@/components/sections/ExperienceSection";
+import { ProjectsSection } from "@/components/sections/ProjectsSection";
 import { ResearchSection } from "@/components/sections/ResearchSection";
 import { SkillsSection } from "@/components/sections/SkillsSection";
 import { WormholeBackdrop } from "@/components/three/WormholeBackdrop";
@@ -29,6 +32,7 @@ export function PortfolioExperience() {
           onComplete={handleLoaderComplete}
         />
       )}
+      {loaderComplete && <FloatingNavbar />}
       <main className="pointer-events-none relative z-10">
         <WormholeHero visible={loaderComplete} />
         <SkillsSection />
@@ -36,7 +40,9 @@ export function PortfolioExperience() {
         <ResearchSection />
         <AwardsSection />
         <EducationSection />
+        <ProjectsSection />
       </main>
+      <Footer />
     </>
   );
 }

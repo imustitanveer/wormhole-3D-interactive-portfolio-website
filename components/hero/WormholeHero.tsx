@@ -2,8 +2,8 @@
 
 import { FileText, Mail } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { type SVGProps } from "react";
 import { CircleImage } from "@/components/ui/CircleImage";
+import { GithubIcon, LinkedinIcon, YoutubeIcon } from "@/components/ui/SocialIcons";
 
 type WormholeHeroProps = {
   visible: boolean;
@@ -27,30 +27,6 @@ function revealAnimation(index: number, visible: boolean, reducedMotion: boolean
   };
 }
 
-function GithubIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M12 .7a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6-.81c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .7Z" />
-    </svg>
-  );
-}
-
-function LinkedinIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 21 22" fill="currentColor" {...props}>
-      <path d="M5.37 3.5A2.18 2.18 0 1 1 1 3.5a2.18 2.18 0 0 1 4.37 0ZM1.44 8.02h3.84V20.4H1.44V8.02Zm6.21 0h3.68v1.69h.05c.51-.97 1.77-1.99 3.64-1.99 3.89 0 4.61 2.56 4.61 5.89v6.79h-3.84v-6.02c0-1.44-.03-3.29-2-3.29-2 0-2.31 1.56-2.31 3.18v6.13H7.65V8.02Z" />
-    </svg>
-  );
-}
-
-function YoutubeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M23.5 6.2a3.02 3.02 0 0 0-2.13-2.14C19.49 3.55 12 3.55 12 3.55s-7.49 0-9.37.51A3.02 3.02 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3.02 3.02 0 0 0 2.13 2.14c1.88.51 9.37.51 9.37.51s7.49 0 9.37-.51a3.02 3.02 0 0 0 2.13-2.14A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.55 15.57V8.43L15.82 12l-6.27 3.57Z" />
-    </svg>
-  );
-}
-
 function HeroProfile() {
   return (
     <CircleImage
@@ -68,7 +44,7 @@ function HeroActions() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-3">
       <a
-        href="mailto:YOUR_EMAIL_HERE"
+        href="mailto:mustassum.tanveer@gmail.com"
         className="inline-flex min-h-11 items-center gap-2 rounded-full bg-violet-500 px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-violet-300"
       >
         <Mail aria-hidden="true" className="size-4" />
@@ -126,7 +102,7 @@ export function WormholeHero({ visible }: WormholeHeroProps) {
   const shouldReduceMotion = useReducedMotion() ?? false;
 
   return (
-    <div className="hero pointer-events-none">
+    <div id="home" className="hero pointer-events-none">
       <section
         className="pointer-events-none relative z-[4] flex min-h-svh items-center justify-center px-5 py-16 text-center sm:px-7 md:px-[clamp(2rem,6vw,6rem)]"
         aria-label="Introduction"
